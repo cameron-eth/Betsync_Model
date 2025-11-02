@@ -1,0 +1,31 @@
+{
+  "hybrid_games": 2743,
+  "hybrid_features": 116,
+  "feature_breakdown": {
+    "market_odds": 3,
+    "record_features": 5,
+    "pbp_features": 24,
+    "ngs_features": 4,
+    "team_stats": 8,
+    "injury_features": 24,
+    "rest_days": 3
+  },
+  "seasons": [
+    2015,
+    2016,
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022,
+    2023,
+    2024
+  ],
+  "models_trained": [
+    "hybrid_ml",
+    "hybrid_spread"
+  ],
+  "includes_injuries": true,
+  "data_coverage": "2015+ (NGS coverage only)"
+}

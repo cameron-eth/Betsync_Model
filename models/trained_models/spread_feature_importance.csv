@@ -1,0 +1,117 @@
+feature,importance,category,importance_pct
+market_home_ml_prob,0.051467102,Market Odds,5.15
+market_away_ml_prob,0.043149658,Market Odds,4.31
+market_prob_diff,0.034294236,Market Odds,3.43
+record_diff,0.022594688,Record,2.26
+away_off_epa_at_home,0.014793835,PBP (EPA),1.48
+away_off_success_rate,0.013784996,PBP (EPA),1.38
+away_win_pct,0.013516038,Record,1.35
+away_top_cb_out,0.013308976,Injury,1.33
+home_rest_days,0.012900791,Rest Days,1.29
+away_wins,0.012854957,Record,1.29
+away_recent_form_epa,0.0122235045,PBP (EPA),1.22
+home_wins,0.01203587,Record,1.2
+home_off_3rd_down_conv_rate,0.011882563,Other,1.19
+away_losses,0.011764199,Record,1.18
+home_win_pct,0.011547674,Record,1.15
+away_off_success_on_road,0.011471301,PBP (EPA),1.15
+away_off_yards_per_play,0.011425106,Other,1.14
+home_def_yards_per_play,0.0112895705,Other,1.13
+home_total_injury_impact,0.011246187,Injury,1.12
+combined_injury_impact,0.011203178,Injury,1.12
+home_def_turnover_rate,0.011179385,Other,1.12
+home_off_epa_on_road,0.011078787,PBP (EPA),1.11
+away_rushing_tds_per_game,0.0109791355,Team Stats,1.1
+injury_impact_differential,0.0109761,Injury,1.1
+away_injury_adj_off_epa,0.010881651,Injury,1.09
+home_off_red_zone_td_rate,0.010862536,Other,1.09
+away_passing_tds_per_game,0.010755059,Team Stats,1.08
+home_off_yards_per_play,0.010738843,Other,1.07
+home_injury_adj_def_epa,0.010647737,Injury,1.06
+away_off_epa_per_play,0.010604044,PBP (EPA),1.06
+home_injury_adj_off_epa,0.010570917,Injury,1.06
+away_off_red_zone_plays,0.010497136,Other,1.05
+home_total_injuries,0.010461539,Other,1.05
+away_def_injury_impact,0.010393693,Injury,1.04
+away_off_success_at_home,0.010369634,PBP (EPA),1.04
+home_recent_form_epa,0.010369405,PBP (EPA),1.04
+home_off_success_at_home,0.010287975,PBP (EPA),1.03
+home_premium_injuries,0.0102742035,Other,1.03
+home_off_red_zone_plays,0.010257312,Other,1.03
+home_off_success_rate,0.010198266,PBP (EPA),1.02
+away_off_turnover_rate,0.010159397,Other,1.02
+home_rushing_yards_per_game,0.0100873,Team Stats,1.01
+away_total_injury_impact,0.010030272,Injury,1.0
+week,0.010027957,Context,1.0
+away_total_injuries,0.010027548,Other,1.0
+away_passing_yards_per_game,0.0098410295,Team Stats,0.98
+home_off_epa_per_play,0.009773589,PBP (EPA),0.98
+home_passing_yards_per_game,0.009724974,Team Stats,0.97
+home_def_success_rate,0.009718149,PBP (EPA),0.97
+away_penalties_per_game,0.009668681,Team Stats,0.97
+home_def_epa_per_play,0.009607199,PBP (EPA),0.96
+away_players_doubtful,0.009552223,Other,0.96
+away_players_out,0.009550282,Other,0.96
+away_off_red_zone_td_rate,0.009533897,Other,0.95
+away_off_3rd_down_conv_rate,0.009530007,Other,0.95
+away_off_epa_on_road,0.0095212925,PBP (EPA),0.95
+home_def_injury_impact,0.009518657,Injury,0.95
+away_premium_injuries,0.009505312,Other,0.95
+home_losses,0.009403064,Record,0.94
+home_off_turnover_rate,0.009374755,Other,0.94
+home_off_epa_at_home,0.0093367575,PBP (EPA),0.93
+away_epa_trend,0.009303173,PBP (EPA),0.93
+rest_advantage,0.009279841,Rest Days,0.93
+home_epa_trend,0.00924749,PBP (EPA),0.92
+home_penalties_per_game,0.009241408,Team Stats,0.92
+home_off_injury_impact,0.009204158,Injury,0.92
+home_off_explosive_play_rate,0.009124506,PBP (EPA),0.91
+away_def_success_rate,0.009013207,PBP (EPA),0.9
+home_off_run_rate,0.008895633,Other,0.89
+away_injury_adj_def_epa,0.008851541,Injury,0.89
+away_off_run_rate,0.008813153,Other,0.88
+away_off_explosive_play_rate,0.008800313,PBP (EPA),0.88
+home_players_doubtful,0.0086496025,Other,0.86
+home_off_pass_rate,0.00864563,Other,0.86
+away_rushing_yards_per_game,0.008550525,Team Stats,0.86
+away_off_pass_rate,0.0084295655,Other,0.84
+home_off_success_on_road,0.008384068,PBP (EPA),0.84
+home_top_wr_out,0.008371268,Injury,0.84
+home_rushing_tds_per_game,0.008327598,Team Stats,0.83
+home_players_out,0.008273583,Other,0.83
+home_passing_tds_per_game,0.008209103,Team Stats,0.82
+away_def_yards_per_play,0.008151162,Other,0.82
+away_off_injury_impact,0.008104417,Injury,0.81
+away_def_turnover_rate,0.0077537172,Other,0.78
+away_def_epa_per_play,0.007481385,PBP (EPA),0.75
+away_edge_out,0.0074251234,Injury,0.74
+home_players_questionable,0.0074046482,Other,0.74
+away_rest_days,0.0055911327,Rest Days,0.56
+home_top_cb_out,0.0053586927,Injury,0.54
+away_players_questionable,0.0024841824,Other,0.25
+away_avg_completed_air_yards,0.0,Next Gen Stats,0.0
+home_qb_out,0.0,Injury,0.0
+away_avg_air_yards_diff,0.0,Next Gen Stats,0.0
+away_pass_aggressiveness,0.0,Next Gen Stats,0.0
+away_avg_time_to_los,0.0,Other,0.0
+away_rush_attempts,0.0,Other,0.0
+away_avg_time_to_throw,0.0,Next Gen Stats,0.0
+away_interceptions_per_game,0.0,Other,0.0
+away_sacks_taken_per_game,0.0,Team Stats,0.0
+home_avg_time_to_throw,0.0,Next Gen Stats,0.0
+home_avg_rush_yards_ngs,0.0,Next Gen Stats,0.0
+home_avg_completed_air_yards,0.0,Next Gen Stats,0.0
+home_avg_air_yards_diff,0.0,Next Gen Stats,0.0
+home_pass_aggressiveness,0.0,Next Gen Stats,0.0
+home_sacks_taken_per_game,0.0,Team Stats,0.0
+home_avg_time_to_los,0.0,Other,0.0
+home_rush_attempts,0.0,Other,0.0
+home_lt_out,0.0,Injury,0.0
+home_edge_out,0.0,Injury,0.0
+away_multiple_ol_out,0.0,Other,0.0
+away_lt_out,0.0,Injury,0.0
+home_multiple_ol_out,0.0,Other,0.0
+away_top_wr_out,0.0,Injury,0.0
+away_qb_out,0.0,Injury,0.0
+home_interceptions_per_game,0.0,Other,0.0
+away_avg_rush_yards_ngs,0.0,Next Gen Stats,0.0

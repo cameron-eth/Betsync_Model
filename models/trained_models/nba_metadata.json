@@ -1,0 +1,19 @@
+{
+  "hybrid_games": 1230,
+  "hybrid_features": 257,
+  "feature_breakdown": {
+    "record_features": 21,
+    "shooting_features": 70,
+    "pace_features": 0,
+    "injury_features": 0,
+    "rest_days": 3
+  },
+  "seasons": [
+    2024
+  ],
+  "models_trained": [
+    "hybrid_ml",
+    "hybrid_spread"
+  ],
+  "includes_injuries": false
+}
