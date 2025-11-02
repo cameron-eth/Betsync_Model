@@ -79,8 +79,8 @@ jobs:
           try:
               pipeline = PureHybridPipeline()
               pipeline.load_hybrid_model()
-              predictions = pipeline.run_full_pipeline()
-              print(f'✅ NFL: Generated {len(predictions)} predictions')
+              pipeline.run_full_pipeline()
+              print(f'✅ NFL: Predictions completed successfully')
           except Exception as e:
               print(f'❌ NFL prediction error: {e}')
               import traceback
@@ -110,8 +110,8 @@ jobs:
           try:
               pipeline = NBAHybridPipeline()
               pipeline.load_hybrid_model()
-              predictions = pipeline.run_full_pipeline()
-              print(f'✅ NBA: Generated {len(predictions)} predictions')
+              pipeline.run_full_pipeline()
+              print(f'✅ NBA: Predictions completed successfully')
           except Exception as e:
               print(f'❌ NBA prediction error: {e}')
               import traceback
