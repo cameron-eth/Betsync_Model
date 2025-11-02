@@ -27,10 +27,22 @@ wheels/
 # Data files (large)
 data/*.csv
 !data/.gitkeep
+# But include essential files for GitHub Actions
+!data/nfl_enhanced_features_v2.csv
+!data/nba_enhanced_features_clean.csv
+!data/nfl_features_to_keep.csv
 
 # Model files (very large)
 models/trained_models/*.joblib
 !models/trained_models/.gitkeep
+# But include final production models
+!models/trained_models/nfl_final_ml_model.joblib
+!models/trained_models/nfl_final_spread_model.joblib
+!models/trained_models/nfl_final_feature_columns.json
+!models/trained_models/nba_hybrid_ml_model.joblib
+!models/trained_models/nba_hybrid_spread_model.joblib
+!models/trained_models/nba_feature_columns.json
+!models/trained_models/nba_metadata.json
 
 # IDE
 .vscode/
