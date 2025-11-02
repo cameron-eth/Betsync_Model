@@ -26,20 +26,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
       
-      - name: Generate NFL Features
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-        continue-on-error: true
+      - name: Check Existing Data
         run: |
-          echo "Generating NFL features..."
-          echo "⚠️  Note: Feature generation requires historical data"
-          echo "This step is optional - using existing features if generation fails"
-          python run_pipeline.py --features || echo "Using existing feature data"
+          echo "📊 Checking for existing data files..."
+          ls -lh data/nfl_enhanced_features_v2.csv
+          echo "✅ Using committed CSV files (no feature generation needed)"
       
       - name: Train NFL Models
         run: |
-          echo "Training NFL models..."
+          echo "🏈 Training NFL models using existing data..."
+          echo "Data source: data/nfl_enhanced_features_v2.csv (3.4M)"
           python run_pipeline.py --train
       
       - name: Upload NFL Models
@@ -71,17 +67,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
       
-      - name: Generate NBA Features
-        continue-on-error: true
+      - name: Check Existing Data
         run: |
-          echo "Generating NBA features..."
-          echo "⚠️  Note: Feature generation requires nba_api access"
-          echo "This step is optional - using existing features if generation fails"
-          python run_nba_pipeline.py --features || echo "Using existing feature data"
+          echo "📊 Checking for existing data files..."
+          ls -lh data/nba_enhanced_features_clean.csv
+          echo "✅ Using committed CSV files (no feature generation needed)"
       
       - name: Train NBA Models
         run: |
-          echo "Training NBA models..."
+          echo "🏀 Training NBA models using existing data..."
+          echo "Data source: data/nba_enhanced_features_clean.csv (3.2M)"
           python run_nba_pipeline.py --train
       
       - name: Upload NBA Models
