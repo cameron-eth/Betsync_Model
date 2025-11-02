@@ -31,6 +31,8 @@ data/*.csv
 !data/nfl_enhanced_features_v2.csv
 !data/nba_enhanced_features_clean.csv
 !data/nfl_features_to_keep.csv
+!data/nfl_historic_matchups.csv
+!data/nba_historic_matchups.csv
 
 # Model files (very large)
 models/trained_models/*.joblib
