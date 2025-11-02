@@ -27,14 +27,66 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
       
+      - name: Download NFL Models (if available)
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: nfl-models
+          path: models/trained_models/
+      
+      - name: Download NBA Models (if available)
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: nba-models
+          path: models/trained_models/
+      
+      - name: Check NFL Models
+        run: |
+          if [ -f "models/trained_models/nfl_final_ml_model.joblib" ]; then
+            echo "✅ NFL models found"
+          else
+            echo "⚠️  NFL models not found - using repository models"
+          fi
+      
+      - name: Check NBA Models
+        run: |
+          if [ -f "models/trained_models/nba_hybrid_ml_model.joblib" ]; then
+            echo "✅ NBA models found"
+          else
+            echo "⚠️  NBA models not found - using repository models"
+          fi
+      
       - name: Run NFL Predictions
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
         run: |
-          echo "Running NFL predictions..."
-          python run_pipeline.py --predict
+          echo "🏈 Running NFL predictions..."
+          python -c "
+          import sys
+          import os
+          
+          # Set environment variables
+          os.environ['SUPABASE_URL'] = '${{ secrets.SUPABASE_URL }}'
+          os.environ['SUPABASE_KEY'] = '${{ secrets.SUPABASE_KEY }}'
+          os.environ['ODDS_API_KEY'] = '${{ secrets.ODDS_API_KEY }}'
+          
+          # Import and run
+          from src.pure_hybrid_pipeline import PureHybridPipeline
+          
+          try:
+              pipeline = PureHybridPipeline(use_final_models=True)
+              pipeline.load_hybrid_model()
+              predictions = pipeline.run_full_pipeline()
+              print(f'✅ NFL: Generated {len(predictions)} predictions')
+          except Exception as e:
+              print(f'❌ NFL prediction error: {e}')
+              import traceback
+              traceback.print_exc()
+              sys.exit(1)
+          "
       
       - name: Run NBA Predictions
         env:
@@ -42,8 +94,30 @@ jobs:
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
         run: |
-          echo "Running NBA predictions..."
-          python run_nba_pipeline.py --predict
+          echo "🏀 Running NBA predictions..."
+          python -c "
+          import sys
+          import os
+          
+          # Set environment variables
+          os.environ['SUPABASE_URL'] = '${{ secrets.SUPABASE_URL }}'
+          os.environ['SUPABASE_KEY'] = '${{ secrets.SUPABASE_KEY }}'
+          os.environ['ODDS_API_KEY'] = '${{ secrets.ODDS_API_KEY }}'
+          
+          # Import and run
+          from src.nba_hybrid_pipeline import NBAHybridPipeline
+          
+          try:
+              pipeline = NBAHybridPipeline()
+              pipeline.load_hybrid_model()
+              predictions = pipeline.run_full_pipeline()
+              print(f'✅ NBA: Generated {len(predictions)} predictions')
+          except Exception as e:
+              print(f'❌ NBA prediction error: {e}')
+              import traceback
+              traceback.print_exc()
+              sys.exit(1)
+          "
       
       - name: Summary
         if: always()
