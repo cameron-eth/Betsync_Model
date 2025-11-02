@@ -1,0 +1,90 @@
+name: Retrain Models (Weekly)
+
+on:
+  schedule:
+    # Run every Sunday at 2am EST (7am UTC)
+    - cron: '0 7 * * 0'
+  workflow_dispatch:  # Allow manual triggers
+
+jobs:
+  retrain-nfl:
+    runs-on: ubuntu-latest
+    if: github.event.schedule == '0 7 * * 0' || github.event_name == 'workflow_dispatch'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Generate NFL Features
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: |
+          echo "Generating NFL features..."
+          python run_pipeline.py --features
+      
+      - name: Train NFL Models
+        run: |
+          echo "Training NFL models..."
+          python run_pipeline.py --train
+      
+      - name: Upload NFL Models
+        uses: actions/upload-artifact@v4
+        with:
+          name: nfl-models
+          path: |
+            models/trained_models/nfl_final_ml_model.joblib
+            models/trained_models/nfl_final_spread_model.joblib
+            models/trained_models/nfl_final_feature_columns.json
+          retention-days: 30
+  
+  retrain-nba:
+    runs-on: ubuntu-latest
+    if: github.event.schedule == '0 7 * * 0' || github.event_name == 'workflow_dispatch'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Generate NBA Features
+        run: |
+          echo "Generating NBA features..."
+          python run_nba_pipeline.py --features
+      
+      - name: Train NBA Models
+        run: |
+          echo "Training NBA models..."
+          python run_nba_pipeline.py --train
+      
+      - name: Upload NBA Models
+        uses: actions/upload-artifact@v4
+        with:
+          name: nba-models
+          path: |
+            models/trained_models/nba_hybrid_ml_model.joblib
+            models/trained_models/nba_hybrid_spread_model.joblib
+            models/trained_models/nba_feature_columns.json
+          retention-days: 30
+
