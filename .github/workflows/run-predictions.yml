@@ -77,7 +77,7 @@ jobs:
           from src.pure_hybrid_pipeline import PureHybridPipeline
           
           try:
-              pipeline = PureHybridPipeline(use_final_models=True)
+              pipeline = PureHybridPipeline()
               pipeline.load_hybrid_model()
               predictions = pipeline.run_full_pipeline()
               print(f'✅ NFL: Generated {len(predictions)} predictions')
