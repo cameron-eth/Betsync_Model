@@ -1,10 +1,10 @@
-name: Retrain Models (Weekly)
+name: Retrain Models (Manual Only)
 
 on:
-  schedule:
-    # Run every Sunday at 2am EST (7am UTC)
-    - cron: '0 7 * * 0'
-  workflow_dispatch:  # Allow manual triggers
+  # schedule:
+  #   # Run every Sunday at 2am EST (7am UTC)
+  #   - cron: '0 7 * * 0'
+  workflow_dispatch:  # Manual triggers only - requires local data setup
 
 jobs:
   retrain-nfl:

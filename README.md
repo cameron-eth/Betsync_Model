@@ -1,317 +1,219 @@
-# 🏈 BetSync NFL Prediction Model
+# Betsync_Model
 
-Machine learning prediction pipeline for NFL game outcomes. Train on historic matchups, predict live games from Odds API.
-
-## 🚀 Quick Start
-
-### 1. Install Dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-### 2. Run Feature Engineering
-
-Process historic matchups and engineer training features:
-
-```bash
-cd src
-python feature_engineering.py
-```
-
-This will:
-- Load `data/nfl_historic_matchups.csv` (13,756 games from 1966-2024)
-- Calculate last 5 games stats (wins, losses, PPG, home/away splits)
-- Calculate season-to-date stats
-- Calculate head-to-head matchup history
-- Save engineered features to `data/engineered_features.csv`
-
-**Features Generated:**
-- Last 5 games: wins, losses, win %, PPG, PPG allowed, point differential
-- Last 5 home/away splits: home record, away record
-- Season stats: wins, losses, win %, PPG, PPG allowed
-- Matchup history: H2H games, wins, avg total points, avg margin
-- Context: week, playoff flag, weather, spread, over/under
-
-### 3. Train Models
-
-Train XGBoost and LightGBM models on engineered features:
-
-```bash
-python model_training.py
-```
-
-This will:
-- Load engineered features
-- Split data (85% train, 15% test)
-- Train XGBoost classifier
-- Train LightGBM classifier
-- Evaluate with cross-validation
-- Compare model performance
-- Save models to `models/trained_models/`
-
-**Models Saved:**
-- `xgboost_model.joblib` - XGBoost classifier
-- `lightgbm_model.joblib` - LightGBM classifier
-- `feature_columns.json` - Feature names for inference
-- `model_metadata.json` - Training metrics and metadata
-
-### 4. Generate Predictions
-
-Use trained models to predict live games from Odds API:
-
-```bash
-python prediction_pipeline.py
-```
-
-**Example Usage:**
-
-```python
-from prediction_pipeline import NFLPredictionPipeline
-
-# Initialize pipeline
-pipeline = NFLPredictionPipeline()
-pipeline.load_models()
-
-# Game data from Odds API
-game = {
-    'home_team': 'Kansas City Chiefs',
-    'away_team': 'Buffalo Bills',
-    'game_date': '2025-10-20',
-    'week': 7,
-    'odds': {
-        'spread': -3.5,
-        'over_under': 54.5
-    },
-    'weather': {
-        'temperature': 72,
-        'wind': 8,
-        'humidity': 60
-    }
-}
-
-# Generate prediction
-prediction = pipeline.predict_game(game)
-
-# Output:
-# {
-#     'game_info': {...},
-#     'predictions': {
-#         'home_win_probability': 0.68,
-#         'predicted_winner': 'Kansas City Chiefs',
-#         'expected_home_score': 28.5,
-#         'expected_away_score': 24.2
-#     },
-#     'confidence': {
-#         'score': 0.82,
-#         'label': 'HIGH'
-#     }
-# }
-
-# Save to Supabase
-pipeline.save_prediction_to_db(prediction)
-```
+NFL and NBA sports prediction models using machine learning.
 
 ## 📊 Model Performance
 
-Models are trained to predict:
-1. **Game Outcome** - Home team win (binary classification)
-2. **Score Differential** - Point margin (regression)
-3. **Total Points** - Combined score (regression)
+| Sport | ML Accuracy | Spread Accuracy | Status |
+|-------|-------------|-----------------|--------|
+| **NFL 🏈** | 61.4% | **69.3%** | ✅ Production |
+| **NBA 🏀** | 64.2% | 63.8% | ✅ Production |
 
-**Evaluation Metrics:**
-- Accuracy
-- Precision, Recall, F1 Score
-- ROC AUC
-- 5-fold Cross-Validation
+## 🚀 Quick Start
 
-## 📁 Project Structure
+### Prerequisites
+- Python 3.10+
+- Supabase account (for storing predictions)
+- Odds API key (for fetching game odds)
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/cameron-eth/Betsync_Model.git
+cd Betsync_Model
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Copy environment variables
+cp .env.example .env
+# Edit .env with your credentials
+```
+
+### Running Predictions Locally
+
+```bash
+# NFL predictions
+python run_pipeline.py --predict
+
+# NBA predictions  
+python run_nba_pipeline.py --predict
+```
+
+## 🤖 GitHub Actions (Automated Predictions)
+
+### Setup Secrets
+
+Add these secrets in **Settings → Secrets → Actions**:
+- `SUPABASE_URL` - Your Supabase project URL
+- `SUPABASE_KEY` - Your Supabase anon/service key
+- `ODDS_API_KEY` - Your Odds API key
+
+### Automated Schedule
+
+**Predictions run automatically 2x daily:**
+- 6:00 AM EST (11:00 UTC)
+- 12:00 PM EST (17:00 UTC)
+
+**Manual triggers available:**
+- Go to **Actions** tab
+- Select "Run NFL and NBA Predictions"
+- Click "Run workflow"
+
+## 📁 Repository Structure
 
 ```
 betsync_model/
-├── data/
-│   ├── nfl_historic_matchups.csv     # Historic games (1966-2024)
-│   └── engineered_features.csv       # Engineered training data
-├── models/
-│   └── trained_models/
-│       ├── xgboost_model.joblib      # Trained XGBoost
-│       ├── lightgbm_model.joblib     # Trained LightGBM
-│       ├── feature_columns.json      # Feature names
-│       └── model_metadata.json       # Training metadata
-├── src/
-│   ├── config.py                     # Configuration
-│   ├── utils.py                      # Helper functions
-│   ├── feature_engineering.py        # Feature pipeline
-│   ├── model_training.py             # Training pipeline
-│   └── prediction_pipeline.py        # Prediction pipeline
-└── requirements.txt
+├── .github/workflows/       # GitHub Actions
+│   ├── run-predictions.yml  # Daily predictions (automated)
+│   └── retrain-models.yml   # Model retraining (manual only)
+├── data/                    # Training data
+│   ├── nfl_enhanced_features_v2.csv     # NFL data (3.4M)
+│   ├── nba_enhanced_features_clean.csv  # NBA data (3.2M)
+│   └── nfl_features_to_keep.csv         # Feature selection
+├── models/trained_models/   # Pre-trained models
+│   ├── nfl_final_ml_model.joblib        # NFL ML model
+│   ├── nfl_final_spread_model.joblib    # NFL Spread model
+│   ├── nba_hybrid_ml_model.joblib       # NBA ML model
+│   └── nba_hybrid_spread_model.joblib   # NBA Spread model
+├── src/                     # Source code
+│   ├── pure_hybrid_pipeline.py          # NFL pipeline
+│   ├── nba_hybrid_pipeline.py           # NBA pipeline
+│   └── ...
+├── run_pipeline.py          # NFL CLI
+├── run_nba_pipeline.py      # NBA CLI
+└── requirements.txt         # Dependencies
 ```
 
-## 🔧 Configuration
+## 🏈 NFL Model Details
 
-Edit `src/config.py` to customize:
+**Performance:**
+- ML Accuracy: 61.4% (improved from 57.7%)
+- Spread Accuracy: 69.3% (improved from 60.9%)
+- Overfitting: 14.5% gap (ML), 10.5% gap (Spread)
 
-```python
-# Supabase
-SUPABASE_URL = "your-url"
-SUPABASE_KEY = "your-key"
+**Improvements Made:**
+1. **Phase 1 - Cleanup:** Removed 41 problematic features
+   - Fixed data leakage (3 missing market odds features)
+   - Removed 18 noisy low-signal features
+   - Result: +3.2% ML, +8.2% Spread
 
-# Model parameters
-XGBOOST_PARAMS = {
-    'max_depth': 6,
-    'learning_rate': 0.05,
-    'n_estimators': 200
-}
+2. **Phase 2 - Feature Engineering:** Added powerful features
+   - Rolling win percentage (0.18 correlation)
+   - EPA differentials (0.23 correlation - strongest!)
+   - Playoff push indicators
 
-# Feature engineering
-LAST_N_GAMES = 5  # Rolling window size
-MIN_GAMES_PLAYED = 3  # Min games for stats
+3. **Phase 3 - Hyperparameter Tuning:** Controlled overfitting
+   - Aggressive regularization (max_depth=4, gamma=0.3)
+   - Reduced overfitting from 32% → 14.5%
+
+**Key Features (95 total):**
+- Record-based: win%, season record, rolling win%
+- EPA stats: offensive/defensive efficiency
+- Situational: rest days, playoff implications
+- Home/away splits
+- Injury impact (refined, position-weighted)
+
+## 🏀 NBA Model Details
+
+**Performance:**
+- ML Accuracy: 64.2%
+- Spread Accuracy: 63.8%
+- Dataset: 1,230 games (2024 season)
+
+**Key Features (257 total):**
+- Win percentage (season, home, away, last 5 games)
+- Shooting stats (FG%, 3P%, FT%, TS%, eFG%)
+- Rebounds, assists, turnovers
+- Rest days and schedule
+- Home/away splits
+- Pace and efficiency ratings
+
+**Data Source:** `nba_api` library (real-time NBA.com data)
+
+## 🔧 Advanced Usage
+
+### Model Training (Local Only)
+
+**Note:** Training requires historical data not available in GitHub Actions.
+
+```bash
+# Generate features (requires data sources)
+python run_pipeline.py --features
+
+# Train models
+python run_pipeline.py --train
+
+# NBA equivalent
+python run_nba_pipeline.py --features
+python run_nba_pipeline.py --train
 ```
 
-## 📈 Feature Engineering Details
+### Feature Analysis
 
-### Last N Games (Sliding Window)
+```bash
+# Check feature importance
+python show_feature_importance.py
 
-For each game, calculate stats based on previous N games:
+# Run diagnostics
+python -c "from src.nba_config import *; print(NBA_SEASONS_AVAILABLE)"
+```
 
-**Overall Performance:**
-- `last5_wins`, `last5_losses`
-- `last5_win_pct`
-- `last5_ppg` (points per game)
-- `last5_ppg_allowed`
-- `last5_point_diff`
+## 📊 Database Schema
 
-**Home/Away Splits:**
-- `last5_home_wins`, `last5_home_losses`, `last5_home_record`
-- `last5_away_wins`, `last5_away_losses`, `last5_away_record`
-
-**Rest:**
-- `rest_days` (days since last game)
-
-### Season Stats
-
-Cumulative season performance:
-- `season_wins`, `season_losses`, `season_win_pct`
-- `season_ppg`, `season_ppg_allowed`
-- `season_games_played`
-
-### Matchup History
-
-Head-to-head between teams:
-- `h2h_games_played`
-- `h2h_home_wins`, `h2h_away_wins`
-- `h2h_avg_total_points`
-- `h2h_avg_margin`
-
-### Contextual
-
-- `week`, `season`, `is_playoff`
-- `weather_temp`, `weather_wind`, `weather_humidity`
-- `spread`, `over_under`
-- `is_neutral_site`
-
-## 🎯 Prediction Confidence
-
-Confidence scores are calculated based on:
-- **Decisiveness** - How far from 50/50 (0.5)
-- **Data Completeness** - % of features available
-
-**Confidence Levels:**
-- HIGH: ≥75%
-- MEDIUM: 60-75%
-- LOW: 50-60%
-- VERY_LOW: <50%
-
-## 🗄️ Database Schema
-
-### `nfl_predictions` Table
-
+### NFL Predictions Table
 ```sql
-CREATE TABLE nfl_predictions (
+CREATE TABLE predictions (
     id BIGSERIAL PRIMARY KEY,
     home_team VARCHAR(255),
     away_team VARCHAR(255),
     game_date DATE,
     home_win_probability FLOAT,
-    away_win_probability FLOAT,
     predicted_winner VARCHAR(255),
     expected_home_score FLOAT,
     expected_away_score FLOAT,
-    expected_total FLOAT,
     confidence_score FLOAT,
-    confidence_label VARCHAR(50),
-    prediction_timestamp TIMESTAMP,
-    model_version VARCHAR(255),
-    created_at TIMESTAMP DEFAULT NOW()
+    prediction_timestamp TIMESTAMP
 );
 ```
 
-## 🔄 Workflow
-
-### One-Time Setup:
-1. Move historic CSV to `data/`
-2. Run feature engineering → creates training dataset
-3. Run model training → trains and saves models
-
-### Production Use:
-1. Fetch upcoming games from Odds API
-2. Run prediction pipeline with game data
-3. Predictions stored in Supabase
-4. Frontend displays predictions
-
-### Continuous Improvement:
-1. After games complete, collect actual results
-2. Calculate prediction accuracy
-3. Retrain model periodically with new data
-
-## 🏆 Model Updates
-
-To retrain with new data:
-
-```bash
-# Add new games to nfl_historic_matchups.csv
-
-# Re-run feature engineering
-python src/feature_engineering.py
-
-# Re-train models
-python src/model_training.py
-
-# Models automatically versioned by timestamp
+### NBA Predictions Table
+```sql
+CREATE TABLE nba_predictions (
+    id BIGSERIAL PRIMARY KEY,
+    home_team VARCHAR(255),
+    away_team VARCHAR(255),
+    game_date DATE,
+    home_win_probability FLOAT,
+    predicted_winner VARCHAR(255),
+    expected_home_score FLOAT,
+    expected_away_score FLOAT,
+    confidence_score FLOAT,
+    prediction_timestamp TIMESTAMP,
+    UNIQUE(home_team, away_team, game_date)
+);
 ```
 
-## 🐛 Troubleshooting
+## 🤝 Contributing
 
-### Issue: "File not found" error
-**Solution:** Ensure you've run feature engineering first to create `engineered_features.csv`
+Models are production-ready. For improvements:
+1. Fork the repository
+2. Create a feature branch
+3. Test locally with your own data
+4. Submit a pull request
 
-### Issue: Model predictions seem off
-**Solution:** Check if recent games data is available in Supabase for feature calculation
+## 📝 License
 
-### Issue: Low confidence scores
-**Solution:** This is normal when teams have limited recent game data (early season)
+MIT License - see LICENSE file for details
 
-## 📝 Notes
+## 🙏 Acknowledgments
 
-- Models train on 13,756 historic games (1966-2024)
-- Predictions require recent game data (last 5 games) for accuracy
-- Confidence scores reflect both prediction decisiveness and data availability
-- Ensemble of XGBoost + LightGBM for robust predictions
-
-## 🔮 Future Enhancements
-
-- Add player injury impact modeling
-- Incorporate betting market movements
-- Add weather impact analysis
-- Implement neural networks for deep learning
-- Add explainability (SHAP values)
-- Real-time model updating
+- NFL data: nflfastR, ESPN
+- NBA data: nba_api (NBA.com official stats)
+- Odds data: The Odds API
+- Machine Learning: XGBoost, scikit-learn
 
 ---
 
-**Built with:** XGBoost, LightGBM, Scikit-learn, Pandas, Supabase
-
-
-
-
-# Betsync_Model
+**Built with ❤️ for accurate sports predictions**
