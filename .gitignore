@@ -35,10 +35,14 @@ data/*.csv
 # Model files (very large)
 models/trained_models/*.joblib
 !models/trained_models/.gitkeep
-# But include final production models
+# But include production models used by pipelines
 !models/trained_models/nfl_final_ml_model.joblib
 !models/trained_models/nfl_final_spread_model.joblib
 !models/trained_models/nfl_final_feature_columns.json
+!models/trained_models/true_hybrid_hybrid_ml_model.joblib
+!models/trained_models/true_hybrid_hybrid_spread_model.joblib
+!models/trained_models/true_hybrid_feature_columns.json
+!models/trained_models/true_hybrid_metadata.json
 !models/trained_models/nba_hybrid_ml_model.joblib
 !models/trained_models/nba_hybrid_spread_model.joblib
 !models/trained_models/nba_feature_columns.json
