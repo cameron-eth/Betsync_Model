@@ -9,6 +9,7 @@ import joblib
 import json
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional
+from datetime import datetime
 import logging
 import subprocess
 import sys
@@ -735,6 +736,7 @@ class PureHybridPipeline:
                     'confidence_level': pred.get('confidence_level', ''),
                     'edge_percentage': float(pred.get('spread_edge', 0.0)),
                     'bet_quality': pred.get('bet_quality', ''),
+                    'prediction_timestamp': datetime.now().isoformat(),
                     'model_version': 'pure_hybrid_v1',
                     'odds_source': 'the_odds_api'
                     # ML edges stored separately once DB columns are added:
