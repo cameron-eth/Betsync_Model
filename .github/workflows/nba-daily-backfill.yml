@@ -32,7 +32,7 @@ jobs:
       - name: Run NBA backfill script
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
         run: |
           python backfill_nba_results.py ${{ inputs.days_back || '3' }}

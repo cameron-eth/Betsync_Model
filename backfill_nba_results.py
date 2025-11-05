@@ -17,7 +17,7 @@ load_dotenv()
 
 # Configuration
 SUPABASE_URL = os.getenv('SUPABASE_URL') or os.getenv('NEXT_PUBLIC_SUPABASE_URL')
-SUPABASE_KEY = os.getenv('SUPABASE_ANON_KEY') or os.getenv('NEXT_PUBLIC_SUPABASE_ANON_KEY')
+SUPABASE_KEY = os.getenv('SUPABASE_KEY') or os.getenv('SUPABASE_ANON_KEY') or os.getenv('NEXT_PUBLIC_SUPABASE_ANON_KEY')
 ODDS_API_KEY = os.getenv('ODDS_API_KEY') or os.getenv('NEXT_PUBLIC_ODDS_API_KEY')
 ODDS_API_BASE = 'https://api.the-odds-api.com/v4'
 
