@@ -1,0 +1,51 @@
+name: NFL Tuesday Results Backfill
+
+on:
+  schedule:
+    # Every Tuesday at 10 AM EST (3 PM UTC) - after Monday night games
+    - cron: '0 15 * * 2'
+  workflow_dispatch:
+    inputs:
+      days_back:
+        description: 'Days to look back (default: 7)'
+        required: false
+        default: '7'
+        type: string
+
+jobs:
+  backfill-results:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: Install dependencies
+        run: |
+          pip install supabase requests python-dotenv
+      
+      - name: Run backfill script
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+        run: |
+          python backfill_nfl_results.py ${{ inputs.days_back || '7' }}
+      
+      - name: Notify Success
+        if: success()
+        run: |
+          echo "✅ NFL Results Backfill completed successfully"
+          echo "📊 Prediction accuracy updated in nfl_model_predictions table"
+      
+      - name: Notify Failure
+        if: failure()
+        run: |
+          echo "❌ NFL Results Backfill failed"
+          echo "Check the logs above for details"
+
