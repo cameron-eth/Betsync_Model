@@ -1,0 +1,51 @@
+name: NBA Daily Results Backfill
+
+on:
+  schedule:
+    # Every day at 8 AM EST (1 PM UTC) - after previous night's games
+    - cron: '0 13 * * *'
+  workflow_dispatch:
+    inputs:
+      days_back:
+        description: 'Days to look back (default: 3)'
+        required: false
+        default: '3'
+        type: string
+
+jobs:
+  backfill-results:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: Install dependencies
+        run: |
+          pip install supabase requests python-dotenv
+      
+      - name: Run NBA backfill script
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+        run: |
+          python backfill_nba_results.py ${{ inputs.days_back || '3' }}
+      
+      - name: Notify Success
+        if: success()
+        run: |
+          echo "✅ NBA Results Backfill completed successfully"
+          echo "📊 Prediction accuracy updated in nba_predictions table"
+      
+      - name: Notify Failure
+        if: failure()
+        run: |
+          echo "❌ NBA Results Backfill failed"
+          echo "Check the logs above for details"
+
