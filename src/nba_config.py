@@ -122,7 +122,8 @@ LOW_CONFIDENCE_THRESHOLD = 0.50
 LOG_LEVEL = "INFO"
 
 # NBA seasons (Oct-Apr, season year is year of end date)
-# Example: 2023-24 season = 2024
+# Example: 2023-24 season = 2024, 2025-26 season = 2026
 # Using recent seasons for faster testing - can expand to full range later
-NBA_SEASONS_AVAILABLE = list(range(2022, 2025))  # 2021-22 through 2023-24 seasons (recent 3 seasons)
+NBA_SEASONS_AVAILABLE = list(range(2022, 2025))  # 2021-22 through 2023-24 seasons (historical data)
+# Current season (2025-26 = 2026) will use live NBA API stats
 

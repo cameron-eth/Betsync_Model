@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 class NBAHybridPipeline:
     """NBA hybrid model pipeline"""
     
-    def __init__(self, current_season: int = 2025):
+    def __init__(self, current_season: int = 2026):
         self.hybrid_ml_model = None
         self.hybrid_spread_model = None
         self.feature_columns = None
@@ -68,13 +68,15 @@ class NBAHybridPipeline:
         with open(NBA_FEATURE_COLUMNS_PATH, 'r') as f:
             self.feature_columns = json.load(f)['hybrid']
         
-        # Initialize feature engine
-        self.feature_engine = NBAAdvancedFeatureEngine(seasons=[self.current_season])
-        self.feature_engine.load_all_data()
+        # Initialize feature engine with historical data seasons
+        # For current season (2024-25), we'll use live API data
+        historical_seasons = [2022, 2023, 2024]  # Available historical data
+        self.feature_engine = NBAAdvancedFeatureEngine(seasons=historical_seasons)
         
         print(f"✅ Loaded hybrid ML model")
         print(f"✅ Loaded hybrid Spread model")
         print(f"✅ Loaded {len(self.feature_columns)} feature columns")
+        print(f"⚠️  Using live NBA API for current season stats")
         
     def get_upcoming_games(self):
         """Get upcoming games from Odds API"""
@@ -199,6 +201,151 @@ class NBAHybridPipeline:
         
         return round(sum(totals) / len(totals), 1) if totals else None
     
+    def fetch_live_team_stats(self, team_abbr: str) -> Dict:
+        """Fetch live team stats from NBA API for current season with all features"""
+        try:
+            from nba_api.stats.endpoints import teamdashboardbygeneralsplits
+            from nba_api.stats.static import teams
+            import time
+            
+            # Get team ID
+            nba_teams = teams.get_teams()
+            team_info = [t for t in nba_teams if t['abbreviation'] == team_abbr]
+            
+            if not team_info:
+                logger.warning(f"Could not find team ID for {team_abbr}")
+                return self._get_default_team_features()
+            
+            team_id = team_info[0]['id']
+            
+            # Fetch current season stats
+            season = f"{self.current_season-1}-{str(self.current_season)[-2:]}"
+            
+            dashboard = teamdashboardbygeneralsplits.TeamDashboardByGeneralSplits(
+                team_id=team_id,
+                season=season,
+                per_mode_detailed='PerGame'
+            )
+            
+            time.sleep(0.6)  # Rate limiting
+            
+            # Get all dataframes: [0]=Overall, [1]=Home, [2]=Away, etc.
+            dfs = dashboard.get_data_frames()
+            overall_stats = dfs[0] if len(dfs) > 0 else pd.DataFrame()
+            
+            if len(overall_stats) == 0:
+                return self._get_default_team_features()
+            
+            stats = overall_stats.iloc[0]
+            
+            # Base season stats
+            features = {
+                'ppg': float(stats.get('PTS', 110.0)),
+                'points_allowed': 110.0,  # Will need opponent stats for this
+                'fgm': float(stats.get('FGM', 38.0)),
+                'fga': float(stats.get('FGA', 85.0)),
+                'fg_pct': float(stats.get('FG_PCT', 0.45)),
+                'fg3m': float(stats.get('FG3M', 12.0)),
+                'fg3a': float(stats.get('FG3A', 35.0)),
+                'fg3_pct': float(stats.get('FG3_PCT', 0.35)),
+                'ftm': float(stats.get('FTM', 15.0)),
+                'fta': float(stats.get('FTA', 19.0)),
+                'ft_pct': float(stats.get('FT_PCT', 0.78)),
+                'oreb': float(stats.get('OREB', 10.0)),
+                'dreb': float(stats.get('DREB', 34.0)),
+                'reb': float(stats.get('REB', 44.0)),
+                'ast': float(stats.get('AST', 26.0)),
+                'stl': float(stats.get('STL', 7.5)),
+                'blk': float(stats.get('BLK', 5.0)),
+                'tov': float(stats.get('TOV', 13.5)),
+                'wins': int(stats.get('W', 0)),
+                'losses': int(stats.get('L', 0)),
+                'win_pct': float(stats.get('W_PCT', 0.5)),
+            }
+            
+            # Calculate derived stats
+            if features['fga'] > 0:
+                features['ft_rate'] = features['fta'] / features['fga']
+                features['ts_pct'] = features['ppg'] / (2 * (features['fga'] + 0.44 * features['fta']))
+                features['efg_pct'] = (features['fgm'] + 0.5 * features['fg3m']) / features['fga']
+            else:
+                features['ft_rate'] = 0.22
+                features['ts_pct'] = 0.57
+                features['efg_pct'] = 0.54
+            
+            if features['ppg'] > 0:
+                features['tov_rate'] = features['tov'] / features['ppg']
+            else:
+                features['tov_rate'] = 0.12
+            
+            features['rest_days'] = 2
+            features['is_back_to_back'] = 0
+            
+            # Add home/away splits and last 5 games
+            # Model expects: home__ppg (from _ppg), home_away_ppg, home_home_ppg, home_last5_ppg
+            for stat in ['ppg', 'points_allowed', 'fgm', 'fga', 'fg_pct', 'fg3m', 'fg3a', 'fg3_pct',
+                        'ftm', 'fta', 'ft_pct', 'ft_rate', 'oreb', 'dreb', 'reb', 'ast', 'stl', 'blk', 'tov',
+                        'ts_pct', 'efg_pct', 'tov_rate', 'wins', 'losses', 'win_pct']:
+                # Leading underscore creates home__ pattern after prefixing
+                features[f'_{stat}'] = features.get(stat, 0)
+                # Away split (when this team plays away)
+                features[f'away_{stat}'] = features.get(stat, 0)
+                # Home split (when this team plays at home)  
+                features[f'home_{stat}'] = features.get(stat, 0)
+                # Last 5 games
+                features[f'last5_{stat}'] = features.get(stat, 0)
+            
+            return features
+            
+        except Exception as e:
+            logger.error(f"Error fetching live stats for {team_abbr}: {e}")
+            import traceback
+            traceback.print_exc()
+            return self._get_default_team_features()
+    
+    def _get_default_team_features(self) -> Dict:
+        """Default team features when no data available"""
+        features = {
+            'ppg': 110.0,
+            'points_allowed': 110.0,
+            'fgm': 38.0,
+            'fga': 85.0,
+            'fg_pct': 0.45,
+            'fg3m': 12.0,
+            'fg3a': 35.0,
+            'fg3_pct': 0.35,
+            'ftm': 15.0,
+            'fta': 19.0,
+            'ft_pct': 0.78,
+            'ft_rate': 0.22,
+            'oreb': 10.0,
+            'dreb': 34.0,
+            'reb': 44.0,
+            'ast': 26.0,
+            'stl': 7.5,
+            'blk': 5.0,
+            'tov': 13.5,
+            'ts_pct': 0.57,
+            'efg_pct': 0.54,
+            'tov_rate': 0.12,
+            'wins': 0,
+            'losses': 0,
+            'win_pct': 0.5,
+            'rest_days': 2,
+            'is_back_to_back': 0
+        }
+        
+        # Add home/away splits and last 5 games (same as season averages for defaults)
+        for stat in ['ppg', 'points_allowed', 'fgm', 'fga', 'fg_pct', 'fg3m', 'fg3a', 'fg3_pct',
+                    'ftm', 'fta', 'ft_pct', 'ft_rate', 'oreb', 'dreb', 'reb', 'ast', 'stl', 'blk', 'tov',
+                    'ts_pct', 'efg_pct', 'tov_rate', 'wins', 'losses', 'win_pct']:
+            features[f'_{stat}'] = features.get(stat, 0)
+            features[f'away_{stat}'] = features.get(stat, 0)
+            features[f'home_{stat}'] = features.get(stat, 0)
+            features[f'last5_{stat}'] = features.get(stat, 0)
+        
+        return features
+    
     def create_game_features(self, game: Dict) -> pd.DataFrame:
         """Create features for a game"""
         home_team = normalize_team_name(game['home_team'])
@@ -212,13 +359,20 @@ class NBAHybridPipeline:
             logger.warning(f"Could not find team abbreviations for {home_team} vs {away_team}")
             return None
         
-        # Calculate team features
-        home_features = self.feature_engine.calculate_team_features(
-            home_abbr, self.current_season, game_date
-        )
-        away_features = self.feature_engine.calculate_team_features(
-            away_abbr, self.current_season, game_date
-        )
+        # For current season (2025-26), use live NBA API stats
+        # For historical seasons, use cached feature engine
+        if self.current_season >= 2025:  # Any season 2024-25 or newer needs live data
+            logger.info(f"Fetching live stats for {home_abbr} vs {away_abbr}")
+            home_features = self.fetch_live_team_stats(home_abbr)
+            away_features = self.fetch_live_team_stats(away_abbr)
+        else:
+            # Calculate team features from historical data
+            home_features = self.feature_engine.calculate_team_features(
+                home_abbr, self.current_season, game_date
+            )
+            away_features = self.feature_engine.calculate_team_features(
+                away_abbr, self.current_season, game_date
+            )
         
         # Combine features
         features = {}
