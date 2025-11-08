@@ -218,16 +218,41 @@ class NBAHybridPipeline:
             
             team_id = team_info[0]['id']
             
-            # Fetch current season stats
+            # Fetch current season stats with retry logic
             season = f"{self.current_season-1}-{str(self.current_season)[-2:]}"
             
-            dashboard = teamdashboardbygeneralsplits.TeamDashboardByGeneralSplits(
-                team_id=team_id,
-                season=season,
-                per_mode_detailed='PerGame'
-            )
+            max_retries = 3
+            retry_delay = 2.0  # Start with 2 second delay
             
-            time.sleep(0.6)  # Rate limiting
+            for attempt in range(max_retries):
+                try:
+                    logger.info(f"Fetching stats for {team_abbr} (attempt {attempt + 1}/{max_retries})")
+                    
+                    # Add delay before each attempt (including first)
+                    if attempt > 0:
+                        wait_time = retry_delay * (2 ** attempt)  # Exponential backoff
+                        logger.info(f"Waiting {wait_time}s before retry...")
+                        time.sleep(wait_time)
+                    else:
+                        time.sleep(1.5)  # Initial delay to be gentle on API
+                    
+                    dashboard = teamdashboardbygeneralsplits.TeamDashboardByGeneralSplits(
+                        team_id=team_id,
+                        season=season,
+                        per_mode_detailed='PerGame',
+                        timeout=60  # Increase timeout to 60 seconds
+                    )
+                    
+                    # Success! Break out of retry loop
+                    break
+                    
+                except Exception as e:
+                    if attempt < max_retries - 1:
+                        logger.warning(f"Attempt {attempt + 1} failed for {team_abbr}: {str(e)[:100]}")
+                        continue
+                    else:
+                        # Final attempt failed
+                        raise e
             
             # Get all dataframes: [0]=Overall, [1]=Home, [2]=Away, etc.
             dfs = dashboard.get_data_frames()
