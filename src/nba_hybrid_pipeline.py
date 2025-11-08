@@ -50,6 +50,7 @@ class NBAHybridPipeline:
         self.supabase = None
         self.current_season = current_season
         self.feature_engine = None
+        self.team_stats_cache: Dict[str, Dict] = {}
         
         # Initialize Supabase
         self.supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -201,33 +202,41 @@ class NBAHybridPipeline:
         
         return round(sum(totals) / len(totals), 1) if totals else None
     
+
     def fetch_live_team_stats(self, team_abbr: str) -> Dict:
         """Fetch live team stats from NBA API for current season with all features"""
         try:
+            # Return cached stats when available to avoid repeated API calls
+            cached = self.team_stats_cache.get(team_abbr)
+            if cached:
+                return cached
+
             from nba_api.stats.endpoints import teamdashboardbygeneralsplits
             from nba_api.stats.static import teams
             import time
-            
+
             # Get team ID
             nba_teams = teams.get_teams()
             team_info = [t for t in nba_teams if t['abbreviation'] == team_abbr]
-            
+
             if not team_info:
                 logger.warning(f"Could not find team ID for {team_abbr}")
-                return self._get_default_team_features()
-            
+                default_features = self._get_default_team_features()
+                self.team_stats_cache[team_abbr] = default_features.copy()
+                return default_features
+
             team_id = team_info[0]['id']
-            
+
             # Fetch current season stats with retry logic
             season = f"{self.current_season-1}-{str(self.current_season)[-2:]}"
-            
+
             max_retries = 3
             retry_delay = 2.0  # Start with 2 second delay
-            
+
             for attempt in range(max_retries):
                 try:
                     logger.info(f"Fetching stats for {team_abbr} (attempt {attempt + 1}/{max_retries})")
-                    
+
                     # Add delay before each attempt (including first)
                     if attempt > 0:
                         wait_time = retry_delay * (2 ** attempt)  # Exponential backoff
@@ -235,17 +244,17 @@ class NBAHybridPipeline:
                         time.sleep(wait_time)
                     else:
                         time.sleep(1.5)  # Initial delay to be gentle on API
-                    
+
                     dashboard = teamdashboardbygeneralsplits.TeamDashboardByGeneralSplits(
                         team_id=team_id,
                         season=season,
                         per_mode_detailed='PerGame',
                         timeout=60  # Increase timeout to 60 seconds
                     )
-                    
+
                     # Success! Break out of retry loop
                     break
-                    
+
                 except Exception as e:
                     if attempt < max_retries - 1:
                         logger.warning(f"Attempt {attempt + 1} failed for {team_abbr}: {str(e)[:100]}")
@@ -253,16 +262,16 @@ class NBAHybridPipeline:
                     else:
                         # Final attempt failed
                         raise e
-            
+
             # Get all dataframes: [0]=Overall, [1]=Home, [2]=Away, etc.
             dfs = dashboard.get_data_frames()
             overall_stats = dfs[0] if len(dfs) > 0 else pd.DataFrame()
-            
+
             if len(overall_stats) == 0:
-                return self._get_default_team_features()
-            
+                raise ValueError("No stats returned from NBA API")
+
             stats = overall_stats.iloc[0]
-            
+
             # Base season stats
             features = {
                 'ppg': float(stats.get('PTS', 110.0)),
@@ -287,7 +296,7 @@ class NBAHybridPipeline:
                 'losses': int(stats.get('L', 0)),
                 'win_pct': float(stats.get('W_PCT', 0.5)),
             }
-            
+
             # Calculate derived stats
             if features['fga'] > 0:
                 features['ft_rate'] = features['fta'] / features['fga']
@@ -297,37 +306,55 @@ class NBAHybridPipeline:
                 features['ft_rate'] = 0.22
                 features['ts_pct'] = 0.57
                 features['efg_pct'] = 0.54
-            
+
             if features['ppg'] > 0:
                 features['tov_rate'] = features['tov'] / features['ppg']
             else:
                 features['tov_rate'] = 0.12
-            
+
             features['rest_days'] = 2
             features['is_back_to_back'] = 0
-            
+
             # Add home/away splits and last 5 games
-            # Model expects: home__ppg (from _ppg), home_away_ppg, home_home_ppg, home_last5_ppg
             for stat in ['ppg', 'points_allowed', 'fgm', 'fga', 'fg_pct', 'fg3m', 'fg3a', 'fg3_pct',
                         'ftm', 'fta', 'ft_pct', 'ft_rate', 'oreb', 'dreb', 'reb', 'ast', 'stl', 'blk', 'tov',
                         'ts_pct', 'efg_pct', 'tov_rate', 'wins', 'losses', 'win_pct']:
-                # Leading underscore creates home__ pattern after prefixing
                 features[f'_{stat}'] = features.get(stat, 0)
-                # Away split (when this team plays away)
                 features[f'away_{stat}'] = features.get(stat, 0)
-                # Home split (when this team plays at home)  
                 features[f'home_{stat}'] = features.get(stat, 0)
-                # Last 5 games
                 features[f'last5_{stat}'] = features.get(stat, 0)
-            
+
+            self.team_stats_cache[team_abbr] = features.copy()
             return features
-            
+
         except Exception as e:
             logger.error(f"Error fetching live stats for {team_abbr}: {e}")
             import traceback
             traceback.print_exc()
-            return self._get_default_team_features()
-    
+
+            # Fallback to historical feature engine if available
+            try:
+                if not self.feature_engine:
+                    self.feature_engine = NBAAdvancedFeatureEngine(seasons=[2022, 2023, 2024])
+                fallback_season = 2024
+                fallback_date = datetime.now().strftime('%Y-%m-%d')
+                logger.info(
+                    f"Falling back to historical features for {team_abbr} (season {fallback_season})"
+                )
+                if getattr(self.feature_engine, 'game_logs_df', None) is None:
+                    self.feature_engine.load_all_data()
+                historical_features = self.feature_engine.calculate_team_features(
+                    team_abbr, fallback_season, fallback_date
+                )
+                self.team_stats_cache[team_abbr] = historical_features.copy()
+                return historical_features
+            except Exception as hist_err:
+                logger.error(
+                    f"Historical fallback failed for {team_abbr}: {hist_err}. Using defaults."
+                )
+                default_features = self._get_default_team_features()
+                self.team_stats_cache[team_abbr] = default_features.copy()
+                return default_features
     def _get_default_team_features(self) -> Dict:
         """Default team features when no data available"""
         features = {
