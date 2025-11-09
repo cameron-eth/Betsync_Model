@@ -1,4 +1,4 @@
-name: Run NFL and NBA Predictions
+name: Run NFL Predictions
 
 on:
   schedule:
@@ -34,27 +34,12 @@ jobs:
           name: nfl-models
           path: models/trained_models/
       
-      - name: Download NBA Models (if available)
-        uses: actions/download-artifact@v4
-        continue-on-error: true
-        with:
-          name: nba-models
-          path: models/trained_models/
-      
       - name: Check NFL Models
         run: |
           if [ -f "models/trained_models/nfl_final_ml_model.joblib" ]; then
             echo "✅ NFL models found"
           else
             echo "⚠️  NFL models not found - using repository models"
-          fi
-      
-      - name: Check NBA Models
-        run: |
-          if [ -f "models/trained_models/nba_hybrid_ml_model.joblib" ]; then
-            echo "✅ NBA models found"
-          else
-            echo "⚠️  NBA models not found - using repository models"
           fi
       
       - name: Run NFL Predictions
@@ -88,41 +73,9 @@ jobs:
               sys.exit(1)
           "
       
-      - name: Run NBA Predictions
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
-        run: |
-          echo "🏀 Running NBA predictions..."
-          python -c "
-          import sys
-          import os
-          
-          # Set environment variables
-          os.environ['SUPABASE_URL'] = '${{ secrets.SUPABASE_URL }}'
-          os.environ['SUPABASE_KEY'] = '${{ secrets.SUPABASE_KEY }}'
-          os.environ['ODDS_API_KEY'] = '${{ secrets.ODDS_API_KEY }}'
-          
-          # Import and run
-          from src.nba_hybrid_pipeline import NBAHybridPipeline
-          
-          try:
-              pipeline = NBAHybridPipeline()
-              pipeline.load_hybrid_model()
-              pipeline.run_full_pipeline()
-              print(f'✅ NBA: Predictions completed successfully')
-          except Exception as e:
-              print(f'❌ NBA prediction error: {e}')
-              import traceback
-              traceback.print_exc()
-              sys.exit(1)
-          "
-      
       - name: Summary
         if: always()
         run: |
-          echo "✅ Prediction run completed at $(date)"
+          echo "✅ NFL prediction run completed at $(date)"
           echo "NFL Model: 61.4% ML / 69.3% Spread"
-          echo "NBA Model: 64.2% ML / 63.8% Spread"
 
