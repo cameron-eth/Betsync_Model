@@ -1,5 +1,5 @@
 {
-  "hybrid_games": 2743,
+  "hybrid_games": 435,
   "hybrid_features": 116,
   "feature_breakdown": {
     "market_odds": 3,
@@ -11,16 +11,8 @@
     "rest_days": 3
   },
   "seasons": [
-    2015,
-    2016,
-    2017,
-    2018,
-    2019,
-    2020,
-    2021,
-    2022,
-    2023,
-    2024
+    2024,
+    2025
   ],
   "models_trained": [
     "hybrid_ml",
