@@ -293,7 +293,28 @@ class CurrentSeasonFeatures:
         
         if len(home_features) == 0 or len(away_features) == 0:
             logger.warning(f"Missing features for {home_team} or {away_team}, using defaults")
-            return self.create_default_features(spread, week or self.current_week)
+            default_features = self.create_default_features(
+                spread, 
+                week or self.current_week, 
+                market_home_ml_prob, 
+                market_away_ml_prob
+            )
+            # Add injury features even when using defaults
+            if self.include_injuries and self.injury_engine:
+                try:
+                    injury_features = self.injury_engine.get_injury_features_for_game(
+                        home_team=home_team,
+                        away_team=away_team,
+                        season=self.current_season,
+                        week=week or self.current_week
+                    )
+                    default_features.update(injury_features)
+                except Exception as e:
+                    logger.warning(f"Could not add injury features, using defaults: {e}")
+                    default_features.update(self._get_default_injury_features())
+            else:
+                default_features.update(self._get_default_injury_features())
+            return default_features
         
         home_features = home_features.iloc[0]
         away_features = away_features.iloc[0]
@@ -462,10 +483,10 @@ class CurrentSeasonFeatures:
         
         return matchup_features
     
-    def create_default_features(self, spread: float, week: int) -> Dict:
+    def create_default_features(self, spread: float, week: int, market_home_ml_prob: float = None, market_away_ml_prob: float = None) -> Dict:
         """Create default league-average features when team data is unavailable"""
         # Use league average values
-        return {
+        features = {
             'spread': spread,
             'home_wins': 3.5,
             'home_losses': 3.5,
@@ -532,6 +553,44 @@ class CurrentSeasonFeatures:
             'away_sacks_taken_per_game': 2.5,
             'week': week,
         }
+        
+        # Add market odds features
+        if market_home_ml_prob is not None and market_away_ml_prob is not None:
+            total = market_home_ml_prob + market_away_ml_prob
+            if total > 0:
+                features['market_home_ml_prob'] = market_home_ml_prob / total
+                features['market_away_ml_prob'] = market_away_ml_prob / total
+                features['market_prob_diff'] = features['market_home_ml_prob'] - features['market_away_ml_prob']
+            else:
+                features['market_home_ml_prob'] = 0.5
+                features['market_away_ml_prob'] = 0.5
+                features['market_prob_diff'] = 0.0
+        else:
+            # Derive from spread if market odds not provided
+            if spread is not None:
+                home_ml, away_ml = self.spread_to_ml_odds(spread)
+                home_implied = self.american_to_implied_prob(home_ml)
+                away_implied = self.american_to_implied_prob(away_ml)
+                if home_implied is not None and away_implied is not None:
+                    total = home_implied + away_implied
+                    if total > 0:
+                        features['market_home_ml_prob'] = home_implied / total
+                        features['market_away_ml_prob'] = away_implied / total
+                        features['market_prob_diff'] = features['market_home_ml_prob'] - features['market_away_ml_prob']
+                    else:
+                        features['market_home_ml_prob'] = 0.5
+                        features['market_away_ml_prob'] = 0.5
+                        features['market_prob_diff'] = 0.0
+                else:
+                    features['market_home_ml_prob'] = 0.5
+                    features['market_away_ml_prob'] = 0.5
+                    features['market_prob_diff'] = 0.0
+            else:
+                features['market_home_ml_prob'] = 0.5
+                features['market_away_ml_prob'] = 0.5
+                features['market_prob_diff'] = 0.0
+        
+        return features
     
     def load_and_calculate_features(self):
         """Main method to load data and calculate all team features"""

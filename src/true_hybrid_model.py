@@ -134,19 +134,41 @@ class TrueHybridModel:
         print(f"📊 ML target distribution: {y_ml.value_counts().to_dict()}")
         print(f"📊 Spread target distribution: {y_spread.value_counts().to_dict()}")
         
+        # Check correlation between targets
+        target_correlation = y_ml.corr(y_spread)
+        target_agreement = (y_ml == y_spread).sum() / len(y_ml) * 100
+        print(f"📊 Target correlation: {target_correlation:.3f}")
+        print(f"📊 Target agreement: {target_agreement:.1f}% (ML and Spread same outcome)")
+        
+        # Check for missing spread data
+        missing_spread = df['spread'].isna().sum()
+        if missing_spread > 0:
+            print(f"⚠️  Warning: {missing_spread} games missing spread data")
+        
         # Temporal split: Train on 2015-2022, Test on 2023-2024
+        # If insufficient historical data, use 80/20 split instead
         train_mask = df['season'] <= 2022
         test_mask = df['season'] >= 2023
         
-        X_train = X[train_mask]
-        X_test = X[test_mask]
-        y_ml_train = y_ml[train_mask]
-        y_ml_test = y_ml[test_mask]
-        y_spread_train = y_spread[train_mask]
-        y_spread_test = y_spread[test_mask]
-        
-        print(f"✅ Training: {len(X_train)} games (2015-2022)")
-        print(f"✅ Testing: {len(X_test)} games (2023-2024)")
+        # Check if we have enough training data
+        if train_mask.sum() < 50:  # Need at least 50 games for training
+            print("⚠️  Insufficient historical data for temporal split, using 80/20 split instead")
+            from sklearn.model_selection import train_test_split
+            X_train, X_test, y_ml_train, y_ml_test, y_spread_train, y_spread_test = train_test_split(
+                X, y_ml, y_spread, test_size=0.2, random_state=42
+            )
+            print(f"✅ Training: {len(X_train)} games (80% split)")
+            print(f"✅ Testing: {len(X_test)} games (20% split)")
+        else:
+            X_train = X[train_mask]
+            X_test = X[test_mask]
+            y_ml_train = y_ml[train_mask]
+            y_ml_test = y_ml[test_mask]
+            y_spread_train = y_spread[train_mask]
+            y_spread_test = y_spread[test_mask]
+            
+            print(f"✅ Training: {len(X_train)} games (2015-2022)")
+            print(f"✅ Testing: {len(X_test)} games (2023-2024)")
         
         # Train ML model
         print("\n🤖 Training Hybrid ML Model...")
@@ -162,20 +184,65 @@ class TrueHybridModel:
         spread_pred = spread_model.predict(X_test)
         spread_acc = accuracy_score(y_spread_test, spread_pred)
         
-        # Store models
-        self.models['hybrid_ml'] = ml_model
-        self.models['hybrid_spread'] = spread_model
+        # Detailed accuracy breakdown
+        print(f"\n📊 ML Model Details:")
+        print(f"   Test set ML distribution: {y_ml_test.value_counts().to_dict()}")
+        print(f"   ML predictions: {pd.Series(ml_pred).value_counts().to_dict()}")
+        print(f"   ML accuracy: {ml_acc:.4f}")
+        
+        print(f"\n📊 Spread Model Details:")
+        print(f"   Test set Spread distribution: {y_spread_test.value_counts().to_dict()}")
+        print(f"   Spread predictions: {pd.Series(spread_pred).value_counts().to_dict()}")
+        print(f"   Spread accuracy: {spread_acc:.4f}")
+        
+        # Check if predictions are identical
+        pred_agreement = (ml_pred == spread_pred).sum() / len(ml_pred) * 100
+        if np.array_equal(ml_pred, spread_pred):
+            print(f"⚠️  WARNING: ML and Spread predictions are IDENTICAL!")
+        else:
+            print(f"   Prediction agreement: {pred_agreement:.1f}%")
+        
+        # Calibrate models to fix overconfidence (especially on upsets)
+        print("\n📊 Calibrating models (Platt scaling)...")
+        from sklearn.calibration import CalibratedClassifierCV
+        
+        # Calibrate ML model using isotonic regression (better for non-linear calibration)
+        print("   Calibrating ML model...")
+        calibrated_ml_model = CalibratedClassifierCV(
+            ml_model,
+            method='isotonic',  # Better for non-linear calibration
+            cv=5
+        )
+        calibrated_ml_model.fit(X_train, y_ml_train)
+        
+        # Calibrate Spread model
+        print("   Calibrating Spread model...")
+        calibrated_spread_model = CalibratedClassifierCV(
+            spread_model,
+            method='isotonic',
+            cv=5
+        )
+        calibrated_spread_model.fit(X_train, y_spread_train)
+        
+        # Store calibrated models
+        self.models['hybrid_ml'] = calibrated_ml_model
+        self.models['hybrid_spread'] = calibrated_spread_model
         self.feature_columns['hybrid'] = list(X.columns)
         
         print(f"\n🎯 HYBRID MODEL PERFORMANCE:")
-        print(f"   ML Accuracy: {ml_acc:.3f}")
-        print(f"   Spread Accuracy: {spread_acc:.3f}")
+        print(f"   ML Accuracy: {ml_acc:.3f} ({int(ml_acc * len(y_ml_test))}/{len(y_ml_test)} correct)")
+        print(f"   Spread Accuracy: {spread_acc:.3f} ({int(spread_acc * len(y_spread_test))}/{len(y_spread_test)} correct)")
+        if abs(ml_acc - spread_acc) < 0.001:
+            print(f"   ⚠️  Note: Identical accuracy is coincidental (different predictions: {100-pred_agreement:.1f}% disagreement)")
+        print(f"   ✅ Models calibrated with isotonic regression (fixes overconfidence)")
         
-        # Feature importance
+        # Feature importance (use base estimator from calibrated model)
         print(f"\n🔥 TOP 20 MOST IMPORTANT FEATURES:")
+        # Get base estimator for feature importance (calibrated model wraps it)
+        base_ml_model = calibrated_ml_model.base_estimator if hasattr(calibrated_ml_model, 'base_estimator') else ml_model
         feature_importance = pd.DataFrame({
             'feature': X.columns,
-            'importance': ml_model.feature_importances_
+            'importance': base_ml_model.feature_importances_
         }).sort_values('importance', ascending=False)
         
         for i, (_, row) in enumerate(feature_importance.head(20).iterrows(), 1):

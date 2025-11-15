@@ -117,8 +117,8 @@ class PureHybridPipeline:
         if team_features is None:
             logger.warning("⚠️  Could not load current season features, predictions may be less accurate")
         
-        print(f"✅ Loaded hybrid ML model")
-        print(f"✅ Loaded hybrid Spread model")
+        print(f"✅ Loaded hybrid ML model (calibrated with isotonic regression)")
+        print(f"✅ Loaded hybrid Spread model (calibrated with isotonic regression)")
         print(f"✅ Loaded {len(self.feature_columns)} feature columns")
         print(f"✅ Loaded historical data for weather/stadium lookup")
         if team_features is not None:
@@ -372,8 +372,9 @@ class PureHybridPipeline:
         # If we have ML odds, we can derive the implied probability from those
         if home_ml_odds and away_ml_odds:
             # Convert American odds to implied probabilities
-            home_implied = self.american_odds_to_prob(home_ml_odds)
-            away_implied = self.american_odds_to_prob(away_ml_odds)
+            # Use american_to_implied_prob() because odds from API are in normal format (not basis points)
+            home_implied = self.american_to_implied_prob(home_ml_odds)
+            away_implied = self.american_to_implied_prob(away_ml_odds)
             
             # For spread betting, use the average or the closer to 50%
             implied_prob = (home_implied + away_implied) / 2
@@ -428,12 +429,14 @@ class PureHybridPipeline:
         away_ml_edge = None
         
         if home_ml_odds is not None:
-            home_implied = self.american_odds_to_prob(home_ml_odds)
+            # Use american_to_implied_prob() because odds from API are in normal format (not basis points)
+            home_implied = self.american_to_implied_prob(home_ml_odds)
             if home_implied:
                 home_ml_edge = (home_win_prob - home_implied) * 100
         
         if away_ml_odds is not None:
-            away_implied = self.american_odds_to_prob(away_ml_odds)
+            # Use american_to_implied_prob() because odds from API are in normal format (not basis points)
+            away_implied = self.american_to_implied_prob(away_ml_odds)
             if away_implied:
                 away_ml_edge = (away_win_prob - away_implied) * 100
         
