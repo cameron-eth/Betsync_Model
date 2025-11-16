@@ -1,7 +1,9 @@
 # BetSync NFL Prediction Model - Requirements
 
 # Core Data Science
-pandas>=2.2.2,<3.0  # Python 3.12 compatible
+# Note: pandas<2.0 required for nfl-data-py compatibility (Python 3.10 in GitHub Actions)
+# For Python 3.12 local development, you may need pandas>=2.2.2, but GitHub Actions uses Python 3.10
+pandas>=1.5.0,<2.0  # Compatible with nfl-data-py 0.3.3
 numpy>=1.24.0
 pyarrow>=14.0.0  # Required by polars and pandas for certain operations
 
