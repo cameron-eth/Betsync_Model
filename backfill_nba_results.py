@@ -87,15 +87,30 @@ class NBAResultsBackfill:
         cutoff_date = (datetime.now() - timedelta(days=days_back)).isoformat()
         
         try:
+            # Get all games from the date range, then filter for ones needing results
+            # This is more reliable than complex Supabase queries
             response = self.supabase.table('nba_predictions')\
                 .select('*')\
-                .eq('game_completed', False)\
                 .gte('game_date', cutoff_date)\
                 .lt('game_date', datetime.now().isoformat())\
                 .execute()
             
-            games = response.data or []
-            print(f"✅ Found {len(games)} games needing results")
+            all_games = response.data or []
+            
+            # Filter for games that need results:
+            # 1. Not completed, OR
+            # 2. Missing actual_winner (even if marked completed)
+            # 3. If force flag is set, include all games
+            force = getattr(self, 'force_backfill', False)
+            if force:
+                games = all_games
+            else:
+                games = [
+                    g for g in all_games 
+                    if not g.get('game_completed', False) or g.get('actual_winner') is None
+                ]
+            
+            print(f"✅ Found {len(games)} games needing results (out of {len(all_games)} total)")
             return games
             
         except Exception as e:
@@ -209,7 +224,7 @@ class NBAResultsBackfill:
             print(f"❌ Error updating game {game_id}: {e}")
             return False
     
-    def run_backfill(self, days_back: int = 3):
+    def run_backfill(self, days_back: int = 3, force: bool = False):
         """
         Main backfill process
         """
@@ -283,9 +298,12 @@ def main():
         backfill = NBAResultsBackfill()
         
         # Default: backfill last 3 days (NBA plays daily)
-        days_back = int(sys.argv[1]) if len(sys.argv) > 1 else 3
+        # Usage: python backfill_nba_results.py [days_back] [--force]
+        days_back = int(sys.argv[1]) if len(sys.argv) > 1 and sys.argv[1].isdigit() else 3
+        force = '--force' in sys.argv or '-f' in sys.argv
         
-        backfill.run_backfill(days_back=days_back)
+        backfill.force_backfill = force
+        backfill.run_backfill(days_back=days_back, force=force)
         
     except Exception as e:
         print(f"❌ Fatal error: {e}")
