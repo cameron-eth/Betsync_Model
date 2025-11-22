@@ -38,14 +38,22 @@ logger = logging.getLogger(__name__)
 class PureHybridPipeline:
     """Pure hybrid model pipeline - THE model"""
     
-    def __init__(self, current_season: int = 2025, current_week: int = 8):
+    def __init__(self, current_season: int = 2025, current_week: int = None):
         self.hybrid_ml_model = None
         self.hybrid_spread_model = None
         self.feature_columns = None
         self.historical_df = None
         self.supabase = None
         self.current_season = current_season
-        self.current_week = current_week
+        # Calculate current week if not provided
+        # Use current week - 1 to ensure we have complete data for that week
+        # This allows predicting next week's games using all data through the previous week
+        if current_week is None:
+            calculated_week = self.get_current_nfl_week()
+            # Use current week - 1 (e.g., if it's week 13, use week 12 data to predict week 13)
+            self.current_week = max(1, calculated_week - 1)
+        else:
+            self.current_week = current_week
         self.feature_fetcher = None
         
         # Initialize Supabase if credentials are available
@@ -107,7 +115,7 @@ class PureHybridPipeline:
         self.historical_df = pd.read_csv("data/nfl_historic_matchups.csv")
         
         # Load current season features using nflreadpy
-        print(f"\n📊 Loading {self.current_season} season features (up to week {self.current_week - 1})...")
+        print(f"\n📊 Loading {self.current_season} season features (up to week {self.current_week})...")
         self.feature_fetcher = CurrentSeasonFeatures(
             current_season=self.current_season,
             current_week=self.current_week
@@ -149,14 +157,16 @@ class PureHybridPipeline:
             raise ValueError("❌ No games found from Odds API")
         
         # Convert to our format and filter for upcoming week games
+        # Use self.current_week + 1 to predict next week's games
+        # (self.current_week is current_week - 1 for data, so we predict current_week)
         current_week_games = []
-        current_week = self.get_current_nfl_week()
+        prediction_week = self.current_week + 1  # Predict games for the week after our data cutoff
         
         for game in games_data:
             game_week = self.calculate_nfl_week(game['commence_time'])
             
-            # Process games for current week and next week (upcoming games)
-            if game_week >= current_week:
+            # Process games for prediction week and next week (upcoming games)
+            if game_week >= prediction_week:
                 # Extract odds data from bookmakers
                 spread = self.extract_spread(game.get('bookmakers', []), game.get('home_team'))
                 home_ml_odds, away_ml_odds = self.extract_ml_odds(
@@ -305,12 +315,18 @@ class PureHybridPipeline:
         from datetime import datetime, timezone
         today = datetime.now(timezone.utc)
         
-        # For 2025 season, Week 1 starts September 4th
+        # For 2025 season, Week 1 starts September 4th (Thursday)
         season_start = datetime(2025, 9, 4, tzinfo=timezone.utc)
         days_since_start = (today - season_start).days
         
         # NFL weeks run Thursday to Wednesday
-        week = max(1, min(18, (days_since_start // 7) + 1))
+        # More accurate calculation: each week is 7 days, starting Thursday
+        # Week 1: Sep 4-10, Week 2: Sep 11-17, etc.
+        # Add 1 because we're counting from week 1, not week 0
+        week = (days_since_start // 7) + 1
+        
+        # Cap at week 18 (end of regular season)
+        week = max(1, min(18, week))
         
         return week
     

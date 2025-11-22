@@ -37,7 +37,7 @@ class CurrentSeasonFeatures:
         
     def fetch_current_season_data(self):
         """Fetch play-by-play data up to current week -1"""
-        logger.info(f"Fetching {self.current_season} season data up to week {self.current_week - 1}...")
+        logger.info(f"Fetching {self.current_season} season data up to week {self.current_week}...")
         
         try:
             # Load current season play-by-play data
@@ -47,6 +47,7 @@ class CurrentSeasonFeatures:
             pbp_df = pbp.to_pandas()
             
             # Filter to only weeks before current week (avoid leakage)
+            # If current_week is 12, use weeks 1-11
             pbp_df = pbp_df[pbp_df['week'] < self.current_week]
             
             logger.info(f"Loaded {len(pbp_df)} plays from weeks 1-{self.current_week - 1}")
@@ -594,7 +595,7 @@ class CurrentSeasonFeatures:
     
     def load_and_calculate_features(self):
         """Main method to load data and calculate all team features"""
-        logger.info(f"Loading {self.current_season} season data up to week {self.current_week - 1}")
+        logger.info(f"Loading {self.current_season} season data up to week {self.current_week}")
         
         # Fetch play-by-play data
         pbp_df = self.fetch_current_season_data()
